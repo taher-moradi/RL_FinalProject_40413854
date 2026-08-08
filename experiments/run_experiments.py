@@ -1,13 +1,22 @@
 """
 experiments/run_experiments.py
-Master Experiment Runner automating all training, benchmark comparisons, and transfer learning tests.
+Master Experiment Runner automating training, benchmark comparisons, and transfer learning tests.
+Fixed Bug 1: Added missing Tuple import from typing.
+Fixed Bug 2: Explicitly passes base seed for reproducible benchmark map generation.
+Fixed Bug 6: Added sys.path project root insertion for standalone script execution.
 """
 
 import os
+import sys
 import json
 import time
+from pathlib import Path
 import pandas as pd
 import numpy as np
+from typing import Tuple, Dict, List, Any  # Fixed Bug 1: Added Tuple import
+
+# Fixed Bug 6: Allow running script directly from CLI
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from environments.generator import MazeGenerator
 from environments.maze import DynamicMazeEnv
@@ -51,10 +60,10 @@ def run_value_iteration_experiments(env: DynamicMazeEnv) -> pd.DataFrame:
     return df
 
 
-def run_q_learning_experiments(env: DynamicMazeEnv, episodes: int = 300) -> Tuple[QLearningAgent, pd.DataFrame]:
-    """Executes Q-Learning training with decay schemes and saves results."""
-    print("\n--- Running Q-Learning Experiments ---")
-    agent = QLearningAgent(alpha=0.1, gamma=0.99, epsilon_start=1.0, epsilon_min=0.01)
+def run_q_learning_experiments(env: DynamicMazeEnv, episodes: int = 2500) -> Tuple[QLearningAgent, pd.DataFrame]:
+    """Executes Q-Learning training with sufficient episode budget for ~26k state space."""
+    print(f"\n--- Running Q-Learning Experiments ({episodes} episodes) ---")
+    agent = QLearningAgent(alpha=0.1, gamma=0.99, epsilon_start=1.0, epsilon_min=0.01, epsilon_decay=0.998)
 
     logs = []
     for ep in range(1, episodes + 1):
@@ -92,21 +101,26 @@ def run_q_learning_experiments(env: DynamicMazeEnv, episodes: int = 300) -> Tupl
             "epsilon": agent.epsilon
         })
 
+        if ep % 500 == 0 or ep == episodes:
+            recent_succ = np.mean([x["success"] for x in logs[-100:]])
+            print(f"Q-Learning Episode {ep}/{episodes} | Recent Success Rate (last 100): {recent_succ * 100:.1f}%")
+
     df = pd.DataFrame(logs)
     df.to_csv("results/raw_data/q_learning_results.csv", index=False)
     agent.save_q_table("results/models/q_learning_source.pkl")
     return agent, df
 
 
-def run_sarsa_lambda_experiments(env: DynamicMazeEnv, episodes: int = 300) -> pd.DataFrame:
+def run_sarsa_lambda_experiments(env: DynamicMazeEnv, episodes: int = 2500) -> pd.DataFrame:
     """Executes SARSA(lambda) sweep over lambda values [0.0, 0.3, 0.7, 0.9]."""
-    print("\n--- Running SARSA(lambda) Experiments ---")
+    print(f"\n--- Running SARSA(lambda) Experiments ({episodes} episodes per lambda) ---")
     lambdas = [0.0, 0.3, 0.7, 0.9]
     all_logs = []
 
     for lam in lambdas:
-        agent = SarsaLambdaAgent(alpha=0.1, gamma=0.99, lam=lam, trace_type="replacing")
-        
+        print(f"  Training SARSA(λ = {lam})...")
+        agent = SarsaLambdaAgent(alpha=0.1, gamma=0.99, lam=lam, trace_type="replacing", epsilon_decay=0.998)
+
         for ep in range(1, episodes + 1):
             state = env.reset()
             agent.reset_traces()
@@ -136,6 +150,10 @@ def run_sarsa_lambda_experiments(env: DynamicMazeEnv, episodes: int = 300) -> pd
                 "success": success
             })
 
+            if ep % 500 == 0 or ep == episodes:
+                recent_succ = np.mean([x["success"] for x in all_logs[-100:]])
+                print(f"    Episode {ep}/{episodes} | Recent Success: {recent_succ * 100:.1f}%")
+
     df = pd.DataFrame(all_logs)
     df.to_csv("results/raw_data/sarsa_lambda_results.csv", index=False)
     return df
@@ -157,7 +175,7 @@ def run_transfer_experiments(source_grid: np.ndarray, source_pos: dict, source_a
     mgr_sim = TransferLearningManager(source_agent, sim_env, source_grid, sim_grid)
     sim_dfs = []
     for sc in [1, 2, 3, 4]:
-        _, df = mgr_sim.run_scenario(scenario_id=sc, num_episodes=100)
+        _, df = mgr_sim.run_scenario(scenario_id=sc, num_episodes=300)
         df["target_type"] = "Similar"
         sim_dfs.append(df)
 
@@ -165,7 +183,7 @@ def run_transfer_experiments(source_grid: np.ndarray, source_pos: dict, source_a
     mgr_diff = TransferLearningManager(source_agent, diff_env, source_grid, diff_grid)
     diff_dfs = []
     for sc in [1, 2, 3, 4]:
-        _, df = mgr_diff.run_scenario(scenario_id=sc, num_episodes=100)
+        _, df = mgr_diff.run_scenario(scenario_id=sc, num_episodes=300)
         df["target_type"] = "Different"
         diff_dfs.append(df)
 
@@ -176,25 +194,30 @@ def run_transfer_experiments(source_grid: np.ndarray, source_pos: dict, source_a
 
 def main():
     ensure_directories()
-    print("Initializing Maze Generator...")
-    gen = MazeGenerator(student_id="40413854")
-    grid, pos = gen.generate_valid_maze(save_path="environments/maps/maze_40413854.json")
-    env = DynamicMazeEnv(grid, pos, max_energy=50, reward_mode="sparse")
+    student_id = "40413854"  # Fixed Bug 3: Unified Student ID
+    print(f"Initializing Reproducible Benchmark Maze Generator for Student ID {student_id}...")
+
+    # Fixed Bug 2: Explicitly pass seed=gen.base_seed (5) for reproducible benchmark maps
+    gen = MazeGenerator(student_id=student_id)
+    grid, pos = gen.generate_valid_maze(seed=gen.base_seed, save_path="environments/maps/maze_40413854.json")
+
+    env = DynamicMazeEnv(grid, pos, max_energy=50, reward_mode="shaped")
 
     # Save Configuration
     config_data = {
-        "student_id": "40413854",
-        "base_seed": 5,
-        "grid_size": 16,
+        "student_id": student_id,
+        "base_seed": gen.base_seed,
+        "grid_size": gen.grid_size,
         "max_energy": 50,
-        "reward_mode": "sparse"
+        "reward_mode": "shaped",
+        "reproducible": True
     }
     with open("results/configs/experiment_config.json", "w") as f:
         json.dump(config_data, f, indent=4)
 
     run_value_iteration_experiments(env)
-    q_agent, _ = run_q_learning_experiments(env, episodes=250)
-    run_sarsa_lambda_experiments(env, episodes=250)
+    q_agent, _ = run_q_learning_experiments(env, episodes=2500)
+    run_sarsa_lambda_experiments(env, episodes=2500)
     run_transfer_experiments(grid, pos, q_agent)
 
 

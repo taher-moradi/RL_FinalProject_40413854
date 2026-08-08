@@ -1,13 +1,19 @@
 """
 experiments/analysis.py
 Data Analysis and Visual Analytics generation script.
-Generates learning curves, heatmaps, policy grids, and transfer metrics.
+Fixed Bug 3: Fixed student_id to "40413854" so Heatmaps strictly match the training map layout.
+Fixed Bug 6: Added sys.path project root insertion for standalone script execution.
 """
 
 import os
+import sys
+from pathlib import Path
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+
+# Fixed Bug 6: Allow running script directly from CLI
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from environments.generator import MazeGenerator
 from environments.maze import DynamicMazeEnv
@@ -114,8 +120,9 @@ def generate_transfer_comparison_plot():
 
 def main():
     print("\n--- Generating Visual Analytics and Figures ---")
-    gen = MazeGenerator(student_id="40123454")
-    # Enforce deterministic student base seed for analytics mapping
+    # Fixed Bug 3: Unified Student ID="40413854" for exact map match with training phase
+    student_id = "40413854"
+    gen = MazeGenerator(student_id=student_id)
     grid, pos = gen.generate_valid_maze(seed=gen.base_seed)
     env = DynamicMazeEnv(grid, pos, max_energy=50)
 

@@ -1,6 +1,7 @@
 """
 agents/value_iteration.py
 Model-Based Value Iteration Algorithm implementation for Dynamic Maze MDP.
+Fixed Design Flaw: Terminal state condition strictly checks key possession for Goal state.
 """
 
 import time
@@ -37,9 +38,7 @@ class ValueIterationAgent:
         self.delta_history: List[float] = []
 
     def solve(self) -> Dict[str, Any]:
-        """
-        Runs Bellman Optimality Backup iterations until max delta < theta.
-        """
+        """Runs Bellman Optimality Backup iterations until max delta < theta."""
         start_time = time.time()
         self.all_states = self.env.get_all_states()
 
@@ -56,9 +55,9 @@ class ValueIterationAgent:
 
             for state in self.all_states:
                 r, c, key, energy = state
-                
-                # Terminal condition state check
-                if energy <= 0 or (r, c) == self.env.goal_pos:
+
+                # FIX: Terminal state ONLY when Goal reached WITH key or energy depleted
+                if energy <= 0 or ((r, c) == self.env.goal_pos and key == 1):
                     new_V[state] = 0.0
                     continue
 
@@ -95,12 +94,10 @@ class ValueIterationAgent:
         }
 
     def extract_policy(self) -> Dict[State, int]:
-        """
-        Extracts greedy policy pi*(s) from computed optimal state values V*(s).
-        """
+        """Extracts greedy policy pi*(s) from computed optimal state values V*(s)."""
         for state in self.all_states:
             r, c, key, energy = state
-            if energy <= 0 or (r, c) == self.env.goal_pos:
+            if energy <= 0 or ((r, c) == self.env.goal_pos and key == 1):
                 self.policy[state] = 0
                 continue
 
@@ -129,18 +126,3 @@ class ValueIterationAgent:
     def get_value(self, state: State) -> float:
         """Returns optimal state value V*(s)."""
         return self.V.get(state, 0.0)
-
-
-if __name__ == "__main__":
-    from environments.generator import MazeGenerator
-
-    gen = MazeGenerator(student_id="40413854")
-    grid, pos = gen.generate_valid_maze()
-    env = DynamicMazeEnv(grid, pos, max_energy=50)
-
-    agent = ValueIterationAgent(env, gamma=0.99, theta=1e-4)
-    results = agent.solve()
-
-    print("Value Iteration Completed Successfully!")
-    print(f"Iterations to Converge: {results['iterations']}")
-    print(f"Execution Time: {results['execution_time']:.4f} seconds")

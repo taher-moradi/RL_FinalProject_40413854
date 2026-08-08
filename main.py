@@ -1,7 +1,8 @@
 """
 main.py
 Master Project Launcher. Provides CLI arguments to run GUI app or execute full experiment benchmarks.
-Updated: Adds --random_map flag to generate new maps dynamically.
+Fixed Bug 4: Corrected --random_map flag logic (default=False).
+Fixed Bug 3: Unified Student ID default to "40413854".
 """
 
 import argparse
@@ -13,7 +14,8 @@ def main():
     parser = argparse.ArgumentParser(description="Dynamic Maze Reinforcement Learning Project Launcher")
     parser.add_argument("--mode", type=str, default="gui", choices=["gui", "experiment"], help="Launch GUI mode or run CLI experiment benchmarks.")
     parser.add_argument("--student_id", type=str, default="40413854", help="Student ID for seed calculation.")
-    parser.add_argument("--random_map", action="store_true", default=True, help="Generate a fresh new random map layout on launch.")
+    # Fixed Bug 4: Correct default=False so running main.py without flags uses reproducible base map
+    parser.add_argument("--random_map", action="store_true", default=False, help="Generate a fresh random map instead of student base seed map.")
 
     args = parser.parse_args()
 

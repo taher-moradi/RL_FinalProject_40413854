@@ -1,7 +1,7 @@
 """
 environments/generator.py
 Dynamic Maze Map Generator with BFS Path Validation.
-Updated: Supports both deterministic seed generation and dynamic random map generation.
+Fixed: Defaults strictly to Student Base Seed for 100% reproducible benchmark maps.
 """
 
 import os
@@ -36,7 +36,7 @@ class MazeGenerator:
 
     def __init__(self, student_id: str = "40413854"):
         self.student_id = student_id
-        # Calculate Base Seed using second-to-last digit
+        # Calculate Base Seed using second-to-last digit (for 40413854 -> 5)
         self.base_seed = int(student_id[-2])
         # Calculate Grid Size: 15 + (base_seed % 4) -> 15 + (5 % 4) = 16
         self.grid_size = 15 + (self.base_seed % 4)
@@ -49,12 +49,14 @@ class MazeGenerator:
     ) -> Tuple[np.ndarray, Dict[str, Tuple[int, int]]]:
         """
         Generates a valid maze layout ensuring a feasible path exists via BFS.
-        If random_seed is True, generates a brand new unique map layout on each call.
+        By default (when random_seed=False and seed=None), uses self.base_seed for 100% reproducibility.
         """
-        if random_seed or seed is None:
+        if random_seed:
             attempt_seed = int(time.time_ns() % 1_000_000_000)
-        else:
+        elif seed is not None:
             attempt_seed = seed
+        else:
+            attempt_seed = self.base_seed  # Default: Deterministic Student Base Seed (5)
 
         while True:
             np.random.seed(attempt_seed)
@@ -127,9 +129,7 @@ class MazeGenerator:
         target: Tuple[int, int],
         allow_door: bool
     ) -> Optional[List[Tuple[int, int]]]:
-        """
-        BFS algorithm to validate path existence between start and target.
-        """
+        """BFS algorithm to validate path existence between start and target."""
         queue = deque([(start, [start])])
         visited = {start}
         rows, cols = grid.shape
@@ -183,7 +183,6 @@ class MazeGenerator:
 
 if __name__ == "__main__":
     generator = MazeGenerator(student_id="40413854")
-    # Generate new random map on each run
-    maze_grid, pos_dict = generator.generate_valid_maze(random_seed=True)
-    print(f"Random Map generated successfully. Shape: {maze_grid.shape}")
-    print(f"Positions: {pos_dict}")
+    maze_grid, pos_dict = generator.generate_valid_maze()
+    print(f"Deterministic Base Map generated for student_id=40413854. Shape: {maze_grid.shape}")
+    print(f"Key positions: {pos_dict}")

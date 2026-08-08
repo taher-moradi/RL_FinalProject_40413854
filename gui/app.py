@@ -1,12 +1,17 @@
 """
 gui/app.py
 Interactive Pygame GUI Application managing event loops, agent execution, and interactive user toggles.
-Updated: Adds dynamic new map generation via [N] key press or on app launch.
+Fixed Bug 5: Explicitly passes base seed when random_map=False to guarantee reproducible map loading.
+Fixed Bug 6: Added sys.path project root insertion for standalone script execution.
 """
 
 import sys
+from pathlib import Path
 import pygame
 import numpy as np
+
+# Fixed Bug 6: Allow running script directly from CLI
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from environments.generator import MazeGenerator
 from environments.maze import DynamicMazeEnv
@@ -17,17 +22,19 @@ from gui.renderer import MazeRenderer
 
 
 class MazeGUIApp:
-    """
-    Main Pygame Application loop managing real-time rendering, agent interactions, and user keyboard controls.
-    """
+    """Main Pygame Application loop managing real-time rendering and interactions."""
 
-    def __init__(self, student_id: str = "40413854", random_map: bool = True):
+    def __init__(self, student_id: str = "40413854", random_map: bool = False):
         self.student_id = student_id
         self.random_map = random_map
 
-        # Initialize Environment with fresh map
+        # Initialize Environment
         self.generator = MazeGenerator(student_id=student_id)
-        self.grid, self.positions = self.generator.generate_valid_maze(random_seed=self.random_map)
+        # Fixed Bug 5: Pass seed explicitly when random_map is False
+        self.grid, self.positions = self.generator.generate_valid_maze(
+            seed=self.generator.base_seed,
+            random_seed=self.random_map
+        )
         self.env = DynamicMazeEnv(self.grid, self.positions, max_energy=50)
 
         # Initialize Agents
@@ -59,13 +66,13 @@ class MazeGUIApp:
         self.grid, self.positions = self.generator.generate_valid_maze(random_seed=True)
         self.env = DynamicMazeEnv(self.grid, self.positions, max_energy=50)
         self.renderer.env = self.env
-        
+
         # Reset Agents for new map
         self.q_agent = QLearningAgent(alpha=0.1, gamma=0.99)
         self.sarsa_agent = SarsaLambdaAgent(alpha=0.1, gamma=0.99, lam=0.7)
         self.vi_agent = ValueIterationAgent(self.env, gamma=0.99)
         self.vi_agent.solve()
-        
+
         if self.current_agent_name == "Q-Learning":
             self.active_agent = self.q_agent
         elif self.current_agent_name == "SARSA(lambda)":
@@ -86,7 +93,6 @@ class MazeGUIApp:
             self._handle_user_events()
 
             if not self.paused:
-                # Determine Action based on selected active agent
                 if self.current_agent_name == "Value Iteration":
                     action = self.vi_agent.get_action(state)
                 elif self.current_agent_name == "Q-Learning":
@@ -99,7 +105,6 @@ class MazeGUIApp:
                 next_state, reward, done, info = self.env.step(action)
                 self.cumulative_reward += reward
 
-                # Agent Q-Table Update during live GUI run
                 if self.current_agent_name == "Q-Learning":
                     self.q_agent.update(state, action, reward, next_state, done)
                     self.q_agent.decay_epsilon(self.current_episode, 500)
@@ -116,14 +121,12 @@ class MazeGUIApp:
                     if len(self.recent_successes) > 20:
                         self.recent_successes.pop(0)
 
-                    # Reset for next episode
                     self.current_episode += 1
                     self.cumulative_reward = 0.0
                     state = self.env.reset()
                     if self.current_agent_name == "SARSA(lambda)":
                         self.sarsa_agent.reset_traces()
 
-            # Render Screen Update
             success_rate = float(np.mean(self.recent_successes)) if self.recent_successes else 0.0
             epsilon_val = getattr(self.active_agent, "epsilon", 0.0)
 
@@ -156,7 +159,6 @@ class MazeGUIApp:
                     self.cumulative_reward = 0.0
 
                 elif event.key == pygame.K_n:
-                    # Generate a brand NEW map on 'N' key press
                     self._generate_new_environment()
 
                 elif event.key == pygame.K_p:
@@ -182,5 +184,5 @@ class MazeGUIApp:
 
 
 if __name__ == "__main__":
-    app = MazeGUIApp(student_id="40413854", random_map=True)
+    app = MazeGUIApp(student_id="40413854", random_map=False)
     app.run()
