@@ -1,4 +1,13 @@
-numpy>=1.26.0
-pygame-ce>=2.4.0
-matplotlib>=3.8.0
-pandas>=2.1.0
+# Core Numerical and Data Manipulation Libraries
+numpy>=1.24.0
+pandas>=2.0.0
+
+# Visualization and Analytics Libraries
+matplotlib>=3.7.0
+seaborn>=0.12.0
+
+# Graphical User Interface (GUI) Framework
+pygame>=2.5.0
+
+# Unit Testing Framework
+pytest>=7.3.0
