@@ -20,7 +20,7 @@ class TargetEnvironmentBuilder:
     Validated using BFS to guarantee path feasibility.
     """
 
-    def __init__(self, source_grid: np.ndarray, source_positions: Dict[str, Tuple[int, int]], student_id: str = "40123454"):
+    def __init__(self, source_grid: np.ndarray, source_positions: Dict[str, Tuple[int, int]], student_id: str = "40413854"):
         self.source_grid = source_grid.copy()
         self.source_positions = copy.deepcopy(source_positions)
         self.generator = MazeGenerator(student_id=student_id)

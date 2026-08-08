@@ -144,7 +144,7 @@ def run_sarsa_lambda_experiments(env: DynamicMazeEnv, episodes: int = 300) -> pd
 def run_transfer_experiments(source_grid: np.ndarray, source_pos: dict, source_agent: QLearningAgent):
     """Executes Transfer Learning across Similar and Different Target Maps."""
     print("\n--- Running Transfer Learning Experiments ---")
-    builder = TargetEnvironmentBuilder(source_grid, source_pos, student_id="40123454")
+    builder = TargetEnvironmentBuilder(source_grid, source_pos, student_id="40413854")
 
     # Build Target Maps
     sim_grid, sim_pos = builder.build_similar_target()
@@ -177,13 +177,13 @@ def run_transfer_experiments(source_grid: np.ndarray, source_pos: dict, source_a
 def main():
     ensure_directories()
     print("Initializing Maze Generator...")
-    gen = MazeGenerator(student_id="40123454")
-    grid, pos = gen.generate_valid_maze(save_path="environments/maps/maze_40123454.json")
+    gen = MazeGenerator(student_id="40413854")
+    grid, pos = gen.generate_valid_maze(save_path="environments/maps/maze_40413854.json")
     env = DynamicMazeEnv(grid, pos, max_energy=50, reward_mode="sparse")
 
     # Save Configuration
     config_data = {
-        "student_id": "40123454",
+        "student_id": "40413854",
         "base_seed": 5,
         "grid_size": 16,
         "max_energy": 50,

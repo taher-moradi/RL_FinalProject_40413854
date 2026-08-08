@@ -32,7 +32,7 @@ class MazeGenerator:
     DOOR = 5
     GOAL = 6
 
-    def __init__(self, student_id: str = "40123454"):
+    def __init__(self, student_id: str = "40413854"):
         self.student_id = student_id
         # Calculate Base Seed using second-to-last digit
         self.base_seed = int(student_id[-2])
@@ -171,9 +171,9 @@ class MazeGenerator:
 
 
 if __name__ == "__main__":
-    generator = MazeGenerator(student_id="40123454")
+    generator = MazeGenerator(student_id="40413854")
     maze_grid, pos_dict = generator.generate_valid_maze(
-        save_path="environments/maps/maze_40123454.json"
+        save_path="environments/maps/maze_40413854.json"
     )
     print(f"Map successfully generated. Shape: {maze_grid.shape}")
     print(f"Key positions: {pos_dict}")

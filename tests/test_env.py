@@ -11,7 +11,7 @@ from environments.maze import DynamicMazeEnv
 
 def test_maze_generator():
     """Tests grid size, obstacle percentage, and component placement for Student ID."""
-    generator = MazeGenerator(student_id="40123454")
+    generator = MazeGenerator(student_id="40413854")
     grid, positions = generator.generate_valid_maze()
 
     # Grid dimensions must be 16x16
@@ -34,7 +34,7 @@ def test_maze_generator():
 
 def test_environment_initialization():
     """Tests reset method and initial state values."""
-    generator = MazeGenerator(student_id="40123454")
+    generator = MazeGenerator(student_id="40413854")
     grid, positions = generator.generate_valid_maze()
     env = DynamicMazeEnv(grid, positions, max_energy=50)
 
@@ -48,7 +48,7 @@ def test_environment_initialization():
 
 def test_door_blocking_without_key():
     """Tests locked door behavior when key is not collected."""
-    generator = MazeGenerator(student_id="40123454")
+    generator = MazeGenerator(student_id="40413854")
     grid, positions = generator.generate_valid_maze()
     env = DynamicMazeEnv(grid, positions, max_energy=50)
 
@@ -67,7 +67,7 @@ def test_door_blocking_without_key():
 
 def test_energy_depletion():
     """Tests episode termination upon energy depletion."""
-    generator = MazeGenerator(student_id="40123454")
+    generator = MazeGenerator(student_id="40413854")
     grid, positions = generator.generate_valid_maze()
     env = DynamicMazeEnv(grid, positions, max_energy=3)
 

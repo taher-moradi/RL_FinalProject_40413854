@@ -140,7 +140,7 @@ if __name__ == "__main__":
     from environments.generator import MazeGenerator
     from environments.maze import DynamicMazeEnv
 
-    gen = MazeGenerator(student_id="40123454")
+    gen = MazeGenerator(student_id="40413854")
     grid, pos = gen.generate_valid_maze()
     env = DynamicMazeEnv(grid, pos, max_energy=50)
 

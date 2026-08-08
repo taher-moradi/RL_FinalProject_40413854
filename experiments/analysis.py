@@ -117,7 +117,7 @@ def generate_transfer_comparison_plot():
 
 def main():
     print("\n--- Generating Visual Analytics and Figures ---")
-    gen = MazeGenerator(student_id="40123454")
+    gen = MazeGenerator(student_id="40413854")
     grid, pos = gen.generate_valid_maze()
     env = DynamicMazeEnv(grid, pos, max_energy=50)
 
