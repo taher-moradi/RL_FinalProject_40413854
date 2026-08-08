@@ -1,10 +1,12 @@
 """
 environments/generator.py
 Dynamic Maze Map Generator with BFS Path Validation.
+Updated: Supports both deterministic seed generation and dynamic random map generation.
 """
 
 import os
 import json
+import time
 import numpy as np
 from collections import deque
 from typing import Tuple, List, Dict, Optional
@@ -39,11 +41,20 @@ class MazeGenerator:
         # Calculate Grid Size: 15 + (base_seed % 4) -> 15 + (5 % 4) = 16
         self.grid_size = 15 + (self.base_seed % 4)
 
-    def generate_valid_maze(self, save_path: Optional[str] = None) -> Tuple[np.ndarray, Dict[str, Tuple[int, int]]]:
+    def generate_valid_maze(
+        self,
+        seed: Optional[int] = None,
+        random_seed: bool = False,
+        save_path: Optional[str] = None
+    ) -> Tuple[np.ndarray, Dict[str, Tuple[int, int]]]:
         """
         Generates a valid maze layout ensuring a feasible path exists via BFS.
+        If random_seed is True, generates a brand new unique map layout on each call.
         """
-        attempt_seed = self.base_seed
+        if random_seed or seed is None:
+            attempt_seed = int(time.time_ns() % 1_000_000_000)
+        else:
+            attempt_seed = seed
 
         while True:
             np.random.seed(attempt_seed)
@@ -58,7 +69,7 @@ class MazeGenerator:
             grid[door_pos] = self.DOOR
             grid[goal_pos] = self.GOAL
 
-            # Minimum 15% walls/obstacles (At least 39 cells for 16x16 grid)
+            # Minimum 18% walls/obstacles (At least 46 cells for 16x16 grid)
             num_walls = int(0.18 * (self.grid_size ** 2))
             
             # Minimum 5 penalty tiles
@@ -101,7 +112,7 @@ class MazeGenerator:
 
                 return grid, positions
 
-            attempt_seed += 1000  # Shift seed for next attempt if invalid
+            attempt_seed = (attempt_seed + 1007) % 2_147_483_647  # Shift seed for next attempt
 
     def _get_unique_coordinates(self, count: int, seed: int) -> List[Tuple[int, int]]:
         """Generates unique random coordinates for key elements."""
@@ -172,8 +183,7 @@ class MazeGenerator:
 
 if __name__ == "__main__":
     generator = MazeGenerator(student_id="40413854")
-    maze_grid, pos_dict = generator.generate_valid_maze(
-        save_path="environments/maps/maze_40413854.json"
-    )
-    print(f"Map successfully generated. Shape: {maze_grid.shape}")
-    print(f"Key positions: {pos_dict}")
+    # Generate new random map on each run
+    maze_grid, pos_dict = generator.generate_valid_maze(random_seed=True)
+    print(f"Random Map generated successfully. Shape: {maze_grid.shape}")
+    print(f"Positions: {pos_dict}")
