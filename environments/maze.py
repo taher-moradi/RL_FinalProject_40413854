@@ -1,6 +1,7 @@
 """
 environments/maze.py
 Full Implementation of Dynamic Maze Environment as a Markov Decision Process (MDP).
+Updated: Fixed Goal accessibility bug when key is not collected.
 """
 
 import numpy as np
@@ -126,9 +127,10 @@ class DynamicMazeEnv:
         intended_next_pos = self._get_next_position(self.agent_pos, actual_action)
         cell_type = self.grid[intended_next_pos]
 
-        # Check wall collision or locked door interaction
+        # Check wall collision, locked door, or locked goal attempt
         is_wall_collision = (cell_type == self.WALL)
         is_door_locked = (cell_type == self.DOOR and self.has_key == 0)
+        is_goal_locked = (intended_next_pos == self.goal_pos and self.has_key == 0)
 
         event = "NORMAL_MOVE"
 
@@ -138,6 +140,10 @@ class DynamicMazeEnv:
         elif is_door_locked:
             next_pos = self.agent_pos
             event = "DOOR_LOCKED_ATTEMPT"
+        elif is_goal_locked:
+            # FIX: Prevent reaching goal without picking up key first!
+            next_pos = self.agent_pos
+            event = "GOAL_WITHOUT_KEY_ATTEMPT"
         else:
             next_pos = intended_next_pos
             if next_pos == self.key_pos and self.has_key == 0:
@@ -145,7 +151,7 @@ class DynamicMazeEnv:
                 event = "KEY_PICKUP"
             elif next_pos == self.door_pos and self.has_key == 1:
                 event = "DOOR_PASSED"
-            elif next_pos == self.goal_pos:
+            elif next_pos == self.goal_pos and self.has_key == 1:
                 event = "GOAL_REACHED"
             elif cell_type == self.PENALTY:
                 event = "PENALTY_STEP"
@@ -187,7 +193,7 @@ class DynamicMazeEnv:
                 return 15.0
             elif event == "PENALTY_STEP":
                 return -5.0
-            elif event in ["WALL_COLLISION", "DOOR_LOCKED_ATTEMPT"]:
+            elif event in ["WALL_COLLISION", "DOOR_LOCKED_ATTEMPT", "GOAL_WITHOUT_KEY_ATTEMPT"]:
                 return -1.0
             elif event == "ENERGY_DEPLETED":
                 return -20.0
@@ -203,7 +209,7 @@ class DynamicMazeEnv:
                 reward += 20.0
             elif event == "PENALTY_STEP":
                 reward -= 8.0
-            elif event in ["WALL_COLLISION", "DOOR_LOCKED_ATTEMPT"]:
+            elif event in ["WALL_COLLISION", "DOOR_LOCKED_ATTEMPT", "GOAL_WITHOUT_KEY_ATTEMPT"]:
                 reward -= 2.0
             elif event == "ENERGY_DEPLETED":
                 reward -= 25.0
@@ -229,7 +235,8 @@ class DynamicMazeEnv:
         """
         r, c, key, energy = state
 
-        if energy <= 0 or (r, c) == self.goal_pos:
+        # FIX: Terminal state ONLY when goal reached AND key collected, or energy depleted
+        if energy <= 0 or ((r, c) == self.goal_pos and key == 1):
             return [(1.0, state, 0.0, True)]
 
         transitions = []
@@ -242,16 +249,24 @@ class DynamicMazeEnv:
             cell_type = self.grid[intended_pos]
 
             is_wall = (cell_type == self.WALL)
-            is_locked = (cell_type == self.DOOR and key == 0)
+            is_locked_door = (cell_type == self.DOOR and key == 0)
+            is_locked_goal = (intended_pos == self.goal_pos and key == 0)
 
-            if is_wall or intended_pos == (r, c) or is_locked:
+            if is_wall or intended_pos == (r, c) or is_locked_door or is_locked_goal:
                 next_r, next_c = r, c
-                event = "WALL_COLLISION" if is_wall else ("DOOR_LOCKED_ATTEMPT" if is_locked else "STAY")
+                if is_wall:
+                    event = "WALL_COLLISION"
+                elif is_locked_door:
+                    event = "DOOR_LOCKED_ATTEMPT"
+                elif is_locked_goal:
+                    event = "GOAL_WITHOUT_KEY_ATTEMPT"
+                else:
+                    event = "STAY"
             else:
                 next_r, next_c = intended_pos
                 if intended_pos == self.key_pos and key == 0:
                     event = "KEY_PICKUP"
-                elif intended_pos == self.goal_pos:
+                elif intended_pos == self.goal_pos and key == 1:
                     event = "GOAL_REACHED"
                 elif cell_type == self.PENALTY:
                     event = "PENALTY_STEP"
@@ -262,7 +277,7 @@ class DynamicMazeEnv:
             dummy_reward = self._calculate_reward((r, c), (next_r, next_c), event)
 
             done = False
-            if (next_r, next_c) == self.goal_pos or next_energy <= 0:
+            if ((next_r, next_c) == self.goal_pos and next_key == 1) or next_energy <= 0:
                 done = True
 
             next_state = (next_r, next_c, next_key, next_energy)

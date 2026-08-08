@@ -1,0 +1,30 @@
+"""
+tests/test_env.py
+Unit tests for Environment functionality, Generator path validity, and Goal locking logic.
+"""
+
+import pytest
+import numpy as np
+from environments.generator import MazeGenerator
+from environments.maze import DynamicMazeEnv
+
+
+def test_goal_blocked_without_key():
+    """Verifies that the agent CANNOT reach the goal or finish episode without collecting key first."""
+    generator = MazeGenerator(student_id="40413854")
+    grid, positions = generator.generate_valid_maze()
+    env = DynamicMazeEnv(grid, positions, max_energy=50)
+
+    # Directly position agent adjacent to Goal without Key
+    goal_r, goal_c = positions["goal"]
+    env.agent_pos = (goal_r, max(0, goal_c - 1))
+    env.has_key = 0  # Ensure agent does NOT have key
+
+    # Attempt to move right onto Goal tile
+    next_state, reward, done, info = env.step(DynamicMazeEnv.RIGHT)
+
+    # Assertions
+    assert done is False  # Episode MUST NOT finish
+    assert info["event"] == "GOAL_WITHOUT_KEY_ATTEMPT"  # Should register locked goal event
+    assert env.agent_pos != positions["goal"]  # Agent MUST remain outside goal
+    assert reward < 0  # Should receive penalty instead of goal reward
